@@ -1,0 +1,41 @@
+// Modelo de dados do servidor.
+// Os nomes das colunas são em inglês; o mapeamento pros nomes do protocolo
+// ("nome", "senha") fica nos presenters e na validação, não aqui.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  /// Sempre salvo em minúsculo (regra 8), então o @unique já cobre maiúsculas/minúsculas.
+  email     String    @unique
+  /// Hash bcrypt. Nunca sai em resposta (regra 11).
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sessions  Session[]
+
+  @@map("users")
+}
+
+/// Uma sessão do protocolo. A tabela inteira é a "whitelist" de sessões ativas:
+/// logout = apagar a linha.
+model Session {
+  /// UUID, como no exemplo do YAML. Usado em DELETE /sessions/{id}.
+  id        String   @id @default(uuid())
+  /// SHA-256 do token. O token em texto puro só existe na resposta do login.
+  tokenHash String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("sessions")
+}
