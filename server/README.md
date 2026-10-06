@@ -3,12 +3,17 @@
 Implementação do protocolo da turma (`../protocolo/protocolo-cliente-servidor.yaml`).
 Contexto e decisões de arquitetura: `../claude.md`.
 
-## Primeira vez
+## Primeira vez (em qualquer computador)
+
+Precisa do Node 22 ou mais novo (`node -v` para conferir).
 
 ```bash
-npm install
-cp .env.example .env        # ajuste HOST/PORT se quiser
-npm run db:migrate          # cria o SQLite (prisma/dev.db) e aplica as migrations
+cd server
+npm install                 # instala as dependências
+cp .env.example .env        # cria o .env (no Windows/cmd: copy .env.example .env); ajuste HOST/PORT se quiser
+npx prisma generate         # gera o cliente do Prisma
+npx prisma migrate dev      # cria o SQLite (prisma/dev.db) e aplica as migrations
+npm run dev                 # sobe o servidor
 ```
 
 ## Rodando
