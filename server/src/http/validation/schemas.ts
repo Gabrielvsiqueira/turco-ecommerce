@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { email, nome, senha } from './rules.js';
+import { descricao, email, nome, nomeProduto, quantidade, senha } from './rules.js';
 
 /*
  * Schemas dos corpos de requisição do YAML.
@@ -22,4 +22,19 @@ export const userPatchRequest = z
   .refine(
     (body) => body.nome !== undefined || body.email !== undefined || body.senha !== undefined,
     'Informe pelo menos um campo: nome, email ou senha.',
+  );
+
+/** ProductRequest (POST /products e PUT /products/{id}): os três campos obrigatórios. */
+export const productRequest = z.object({ nome: nomeProduto, descricao, quantidade });
+
+/** ProductPatchRequest (PATCH /products/{id}): pelo menos um de nome, descricao ou quantidade. */
+export const productPatchRequest = z
+  .object({
+    nome: nomeProduto.optional(),
+    descricao: descricao.optional(),
+    quantidade: quantidade.optional(),
+  })
+  .refine(
+    (body) => body.nome !== undefined || body.descricao !== undefined || body.quantidade !== undefined,
+    'Informe pelo menos um campo: nome, descricao ou quantidade.',
   );

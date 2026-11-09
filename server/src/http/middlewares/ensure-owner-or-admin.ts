@@ -10,9 +10,9 @@ import { ForbiddenError } from '../../errors/api-errors.js';
  * loadUser e dá 404.
  */
 export const ensureOwnerOrAdmin: RequestHandler = (_req, res, next) => {
-  const { auth, targetUserId } = res.locals;
+  const { auth, targetId } = res.locals;
 
-  if (targetUserId !== auth.userId && !auth.isAdmin) {
+  if (targetId !== auth.userId && !auth.isAdmin) {
     throw new ForbiddenError('O id informado não pertence ao usuário autenticado.');
   }
 

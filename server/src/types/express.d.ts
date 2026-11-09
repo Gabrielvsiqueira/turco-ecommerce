@@ -1,4 +1,4 @@
-import type { User } from '@prisma/client';
+import type { Product, User } from '@prisma/client';
 import type { AuthContext } from '../data/session-data.js';
 
 /**
@@ -10,10 +10,12 @@ declare global {
     interface Locals {
       /** Preenchido por `authenticate`. */
       auth: AuthContext;
-      /** Preenchido por `validateUserId`: o id da URL já convertido. */
-      targetUserId: number;
+      /** Preenchido por `validateId`: o id da URL já convertido. */
+      targetId: number;
       /** Preenchido por `loadUser`. */
       user: User;
+      /** Preenchido por `loadProduct`. */
+      product: Product;
     }
   }
 }

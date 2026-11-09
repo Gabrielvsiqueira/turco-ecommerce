@@ -42,3 +42,19 @@ model Session {
   @@index([userId])
   @@map("sessions")
 }
+
+/// Produto do protocolo (exposto como nome/descricao/quantidade).
+/// Nomes repetidos são permitidos: o produto é identificado pelo id.
+model Product {
+  id          Int      @id @default(autoincrement())
+  /// 2 a 100 caracteres, já com trim.
+  name        String
+  /// Até 500 caracteres, já com trim. Pode ser "".
+  description String
+  /// Quantidade em estoque, inteiro entre 0 e 1.000.000.
+  quantity    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}

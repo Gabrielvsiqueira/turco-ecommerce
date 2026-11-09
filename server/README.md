@@ -25,6 +25,9 @@ npm run make-admin -- maria@exemplo.com      # promove um usuário já cadastrad
 O papel é lido do banco a cada requisição, então quem é promovido não precisa logar de novo.
 O ADM pode listar (`GET /users`), ler, alterar e excluir qualquer usuário. Sessões continuam sendo só do dono.
 
+Produtos (`/products`, `/products/{id}`): qualquer usuário logado lista e consulta o estoque; só o ADM cadastra,
+altera (PUT/PATCH) e remove. Para um usuário comum, qualquer escrita dá `403`, exista o produto ou não.
+
 ## Rodando
 
 ```bash
@@ -73,14 +76,14 @@ Para zerar o banco: `npm run db:reset`.
 | Rotas | `src/routes.ts` | Cadeia da regra 10 por rota + 405 |
 | Middlewares | `src/http/middlewares/protocol-cors.ts` | CORS em toda resposta, OPTIONS → 204 (regra 5) |
 | | `src/http/middlewares/authenticate.ts` | 401 |
-| | `src/http/middlewares/validate-user-id.ts` | 400 do id |
+| | `src/http/middlewares/validate-id.ts` | 400 do id (`/users/{id}` e `/products/{id}`) |
 | | `src/http/middlewares/ensure-owner-or-admin.ts` | 403 em `/users/{id}`: dono ou ADM, sem ir ao banco |
-| | `src/http/middlewares/require-admin.ts` | 403 nas rotas só de ADM (`GET /users`) |
-| | `src/http/middlewares/load-user.ts` | 404 |
+| | `src/http/middlewares/require-admin.ts` | 403 nas rotas só de ADM (`GET /users` e escritas de `/products`) |
+| | `src/http/middlewares/load-user.ts`, `load-product.ts` | 404 |
 | | `src/http/middlewares/fallbacks.ts` | 404 de rota e 405 (regra 15) |
 | | `src/http/middlewares/error-handler.ts` | Único ponto que gera `{"mensagem": ...}` |
-| Validação | `src/http/validation/rules.ts` | Email, Senha e Nome do YAML (zod) |
-| | `src/http/validation/schemas.ts` | LoginRequest, UserRequest, UserPatchRequest |
+| Validação | `src/http/validation/rules.ts` | Email, Senha, Nome, NomeProduto, Descricao e Quantidade do YAML (zod) |
+| | `src/http/validation/schemas.ts` | LoginRequest, UserRequest, UserPatchRequest, ProductRequest, ProductPatchRequest |
 | | `src/http/validation/parse-body.ts` | Lê o JSON cru e valida (400 do corpo) |
 | Controllers | `src/http/controllers/*` | Finos: corpo → service → presenter |
 | Presenters | `src/http/presenters/*` | Formato exato das respostas, nunca a senha |
@@ -90,7 +93,7 @@ Para zerar o banco: `npm run db:reset`.
 | Painel | `src/logging/activity-log.ts` | Painel do console: logados agora + últimos eventos |
 | Scripts | `src/scripts/seed.ts`, `src/scripts/make-admin.ts` | Criar/promover ADM (fora do protocolo) |
 | Ambiente | `src/env.ts` | Carrega o `.env` antes de tudo |
-| Banco | `prisma/schema.prisma` | Modelos `User` (com `isAdmin`) e `Session` (whitelist) |
+| Banco | `prisma/schema.prisma` | Modelos `User` (com `isAdmin`), `Session` (whitelist) e `Product` |
 
 ## Problemas comuns
 

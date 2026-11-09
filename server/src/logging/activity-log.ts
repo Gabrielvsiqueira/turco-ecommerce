@@ -3,7 +3,7 @@ import { prisma } from '../database/prisma.js';
 
 /**
  * Painel do console do servidor: quem está logado agora e os últimos eventos
- * (login, logout, cadastro, alteração, exclusão, erros). Atende o requisito da
+ * (login, logout, cadastro, alteração, exclusão, produtos, erros). Atende o requisito da
  * entrega 02 de o servidor mostrar a lista de logados sempre atualizada.
  *
  * Dois modos:
@@ -17,6 +17,9 @@ import { prisma } from '../database/prisma.js';
 
 /** Quem aparece nos eventos. Serve tanto para o model User quanto para quem fez a ação. */
 export type Who = { id: number; name: string; email: string; isAdmin: boolean };
+
+/** O suficiente do produto para aparecer nos eventos. */
+export type ProductInfo = { id: number; name: string; quantity: number };
 
 type Event = { at: Date; kind: string; detail: string };
 
@@ -57,6 +60,16 @@ export const activityLog = {
       'EXCLUIU',
       `${whoDidItTo(actor, target)} · ${plural(closedSessions, 'sessão encerrada', 'sessões encerradas')}`,
     ),
+
+  productCreated: (actor: Who, product: ProductInfo) =>
+    record('PRODUTO', `${actorName(actor)} cadastrou ${describeProduct(product)}`),
+
+  /** fields: nomes dos campos do protocolo que vieram no corpo. */
+  productUpdated: (actor: Who, product: ProductInfo, fields: string[]) =>
+    record('PRODUTO', `${actorName(actor)} alterou ${describeProduct(product)} · ${fields.join(', ')}`),
+
+  productDeleted: (actor: Who, product: ProductInfo) =>
+    record('PRODUTO', `${actorName(actor)} removeu ${describeProduct(product)}`),
 
   /** Erro inesperado (500). No modo painel, a stack completa só aparece com PAINEL=off. */
   failed: (error: unknown) => {
@@ -148,6 +161,14 @@ function whoDidItTo(actor: Who, target: Who): string {
     return `${describe(target)} (própria conta)`;
   }
   return `${actor.name}${actor.isAdmin ? ' (ADM)' : ''} → ${describe(target)}`;
+}
+
+function actorName(actor: Who): string {
+  return `${actor.name}${actor.isAdmin ? ' (ADM)' : ''}`;
+}
+
+function describeProduct(product: ProductInfo): string {
+  return `"${product.name}" (id ${product.id}, estoque ${product.quantity})`;
 }
 
 function shortId(id: string): string {
