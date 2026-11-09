@@ -13,7 +13,7 @@ integração, qualquer cliente precisa funcionar com o servidor de qualquer cole
 
 A 1ª entrega cobre **autenticação** (login/logout) e **CRUD do próprio usuário**. A 2ª entrega
 (protocolo 1.4.0) adiciona o papel **ADM** (administra qualquer usuário) e o **CRUD de produtos** com
-estoque. O ADM já está pronto no servidor e no cliente; produtos estão prontos no servidor e em andamento no cliente.
+estoque. O ADM já está pronto no servidor e no cliente; produtos estão prontos no servidor e no cliente.
 
 | Parte        | Tecnologia                                                | Papel                                                                        |
 | ------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -98,13 +98,16 @@ Regras gerais garantidas pelo servidor (numeradas como no README do protocolo):
 | Perfil      | `/perfil`   | Mostra os dados, edita (envia só o que mudou), **Sair** e **Excluir conta** (com confirmação)                   |
 | Usuários    | `/usuarios` | **Só ADM.** Lista todos os usuários (`GET /users`) com id, nome, e-mail e papel                                  |
 | Usuário     | `/usuarios/:id` | **Só ADM.** A mesma tela de perfil para outra conta: edita e exclui (sem "Sair"; excluir volta para a lista) |
+| Produtos    | `/produtos` | Qualquer logado. Lista os produtos com descrição e estoque ("Esgotado" quando é 0). ADM vê **Novo produto** |
+| Produto     | `/produtos/:id` | Consulta o estoque. O ADM vê também o formulário de edição (envia só o que mudou, via PATCH) e **Remover** (com confirmação) |
+| Novo produto | `/produtos/novo` | **Só ADM.** Cadastra nome, descrição (opcional) e quantidade, e abre o produto criado |
 
 Comportamentos importantes:
 
 - O **endereço do servidor** fica salvo no navegador. Trocar de servidor descarta a sessão, porque o
   token só vale no servidor que o emitiu.
 - A **sessão** (token) também fica salva: recarregar a página mantém o login.
-- O **papel** vem no `usuario` do login (`admin`). O menu **Usuários** e as telas de ADM só aparecem para
+- O **papel** vem no `usuario` do login (`admin`). O menu **Usuários**, o cadastro e a edição de produtos só aparecem para
   ADM, mas quem garante a permissão é o servidor (403). Ao abrir o perfil, o papel é relido do servidor.
   Servidor que não manda `admin` (versão antiga do protocolo) = usuário comum.
 - Qualquer **401** numa tela logada encerra a sessão local e volta para o login com aviso.
@@ -286,24 +289,26 @@ client/
 | `main.tsx`                      | Liga o React à página                                                                                                                                 |
 | `App.tsx`                       | Define `/login` e `/cadastro` (só sem sessão) e `/perfil` (só com sessão). Qualquer outro endereço vai para `/perfil`                                 |
 | `index.css`                     | Visual das telas, com cores para tema claro e escuro                                                                                                  |
-| `validation.ts`                 | `validateEmail`, `validateSenha` e `validateNome`, espelhando o YAML                                                                                  |
+| `validation.ts`                 | `validateEmail`, `validateSenha`, `validateNome`, `validateNomeProduto`, `validateDescricao` e `parseQuantidade`, espelhando o YAML                                                                                  |
 | `api/schema.ts`                 | **Gerado** do YAML com `npm run gen:api`. Não editar à mão                                                                                            |
 | `api/types.ts`                  | Atalhos de nomes para os tipos gerados (`UserResponse`, `SessionResponse`...)                                                                         |
-| `api/client.ts`                 | `createApi`: login, logout, cadastro, buscar/editar/excluir usuário. Converte erros em `ApiError` com mensagem pronta e avisa a sessão em caso de 401 |
+| `api/client.ts`                 | `createApi`: login, logout, cadastro, usuários e produtos (listar, buscar, cadastrar, editar, remover). Converte erros em `ApiError` com mensagem pronta e avisa a sessão em caso de 401 |
 | `api/server-url.ts`             | Normaliza o endereço digitado (`192.168.0.10:8080` → `http://192.168.0.10:8080`) e acrescenta `/api/v1`                                               |
 | `session/storage.ts`            | Lê e grava servidor + sessão no `localStorage`, sem quebrar se ele não estiver disponível                                                             |
 | `session/session-context.ts`    | Define o que a sessão oferece às telas e o hook `useSession()`                                                                                        |
 | `session/SessionProvider.tsx`   | Guarda o estado (servidor, sessão, aviso de saída) e entrega um `api` já com o token                                                                  |
-| `components/Field.tsx`          | Campo de formulário com rótulo, dica e erro                                                                                                           |
+| `components/Field.tsx`          | `Field` e `TextAreaField`: campo com rótulo, dica e erro                                                                                                           |
 | `components/Alert.tsx`          | Caixa de aviso (erro, sucesso, informação)                                                                                                            |
 | `components/ServerUrlField.tsx` | Campo "Servidor" usado no login e no cadastro                                                                                                         |
-| `components/Layout.tsx`         | Cabeçalho com o servidor atual (bolinha verde = logado), o menu conforme o papel (Usuários só para ADM) e a área da página                             |
+| `components/Layout.tsx`         | Cabeçalho com o servidor atual (bolinha verde = logado), o menu conforme o papel (Produtos para todos, Usuários só para ADM) e a área da página                             |
 | `components/RouteGuards.tsx`    | `RequireAuth` (sem sessão → login, levando o aviso), `RequireGuest` (com sessão → perfil) e `RequireAdmin` (não é ADM → perfil)                       |
 | `session/roles.ts`              | `isAdmin(session)`: só `admin === true` conta como ADM                                                                                                |
 | `pages/LoginPage.tsx`           | Tela Entrar                                                                                                                                           |
 | `pages/RegisterPage.tsx`        | Tela Criar conta, com confirmação de senha                                                                                                            |
 | `pages/UserPage.tsx`            | Perfil (`/perfil`) e perfil de outro usuário para o ADM (`/usuarios/:id`): carrega, edita via PATCH, sai (só o próprio) e exclui                     |
 | `pages/UsersPage.tsx`           | Lista de usuários do ADM (`GET /users`)                                                                                                               |
+| `pages/ProductsPage.tsx`        | Lista de produtos (`GET /products`), com o botão Novo produto para o ADM                                                                              |
+| `pages/ProductPage.tsx`         | Produto (`/produtos/:id`: consulta para todos, edição e remoção para o ADM) e Novo produto (`/produtos/novo`), com o formulário compartilhado          |
 
 ---
 
