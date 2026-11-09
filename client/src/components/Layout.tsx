@@ -20,6 +20,7 @@ export function Layout() {
               <NavLink to="/perfil" end>
                 Meu perfil
               </NavLink>
+              <NavLink to="/produtos">Produtos</NavLink>
               {admin && <NavLink to="/usuarios">Usuários</NavLink>}
             </nav>
           )}

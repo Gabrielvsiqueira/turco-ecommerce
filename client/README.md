@@ -31,8 +31,8 @@ npm run typecheck    # o TypeScript aponta o que quebrou
 | `src/api/client.ts` | Chamadas da API (openapi-fetch), erros viram `ApiError` com mensagem pronta |
 | `src/api/server-url.ts` | Normaliza o endereço digitado e monta o `/api/v1` |
 | `src/session/*` | Servidor + sessão atuais, salvos no `localStorage`; 401 encerra a sessão; `roles.ts` diz se é ADM |
-| `src/validation.ts` | Regras de Email/Senha/Nome do YAML, só para retorno rápido no formulário |
-| `src/pages/*` | Login, Cadastro, Perfil (ver, editar, sair, excluir conta) e, para ADM, Usuários (lista) e o perfil de qualquer usuário |
+| `src/validation.ts` | Regras de Email/Senha/Nome e de produto (NomeProduto/Descricao/Quantidade) do YAML, só para retorno rápido no formulário |
+| `src/pages/*` | Login, Cadastro, Perfil (ver, editar, sair, excluir conta), Produtos (lista e consulta de estoque) e, para ADM, Usuários (lista), o perfil de qualquer usuário e cadastro/edição/remoção de produtos |
 | `src/components/*` | Campos, alertas, layout com menu por papel e guardas de rota (`RequireAuth`, `RequireGuest`, `RequireAdmin`) |
 
 ## Problemas comuns

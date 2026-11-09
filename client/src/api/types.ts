@@ -11,3 +11,6 @@ export type UserRequest = Schemas['UserRequest'];
 export type UserPatchRequest = Schemas['UserPatchRequest'];
 export type UserResponse = Schemas['UserResponse'];
 export type SessionResponse = Schemas['SessionResponse'];
+export type ProductRequest = Schemas['ProductRequest'];
+export type ProductPatchRequest = Schemas['ProductPatchRequest'];
+export type ProductResponse = Schemas['ProductResponse'];

@@ -1,7 +1,13 @@
 import createClient from 'openapi-fetch';
 import type { paths } from './schema';
 import { apiBaseUrl } from './server-url';
-import type { LoginRequest, UserPatchRequest, UserRequest } from './types';
+import type {
+  LoginRequest,
+  ProductPatchRequest,
+  ProductRequest,
+  UserPatchRequest,
+  UserRequest,
+} from './types';
 
 /**
  * Erro de uma chamada à API, já com uma mensagem pronta para mostrar.
@@ -63,6 +69,23 @@ export function createApi({ serverUrl, token, onUnauthorized }: Options) {
 
     deleteUser: (id: number) =>
       authed(client.DELETE('/users/{id}', { params: { path: { id } } })),
+
+    /** GET /products: qualquer usuário logado. */
+    listProducts: () => authed(client.GET('/products')),
+
+    /** GET /products/{id}: consulta de estoque, qualquer usuário logado. */
+    getProduct: (id: number) => authed(client.GET('/products/{id}', { params: { path: { id } } })),
+
+    /** POST /products: só ADM (usuário comum recebe 403). */
+    createProduct: (body: ProductRequest) => authed(client.POST('/products', { body })),
+
+    /** PATCH /products/{id}: só ADM. */
+    updateProduct: (id: number, body: ProductPatchRequest) =>
+      authed(client.PATCH('/products/{id}', { params: { path: { id } }, body })),
+
+    /** DELETE /products/{id}: só ADM. */
+    deleteProduct: (id: number) =>
+      authed(client.DELETE('/products/{id}', { params: { path: { id } } })),
   };
 }
 

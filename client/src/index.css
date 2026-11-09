@@ -159,7 +159,8 @@ fieldset {
   font-size: 0.9rem;
 }
 
-.field input {
+.field input,
+.field textarea {
   font: inherit;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
@@ -168,12 +169,18 @@ fieldset {
   color: var(--text);
 }
 
-.field input:focus-visible {
+.field textarea {
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
 }
 
-.field input[aria-invalid='true'] {
+.field input[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
   border-color: var(--danger);
 }
 
@@ -348,6 +355,49 @@ button:disabled {
 
 .cell-email {
   overflow-wrap: anywhere;
+}
+
+/* Produtos */
+
+.cell-description {
+  max-width: 320px;
+  overflow-wrap: anywhere;
+}
+
+.stock {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stock-out {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.stock-big {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.25rem 0 0;
+}
+
+.product-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0 0 1rem;
+}
+
+.button-link {
+  display: inline-block;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 520px) {
