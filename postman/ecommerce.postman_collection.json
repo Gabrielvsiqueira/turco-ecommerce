@@ -1,117 +1,293 @@
 {
   "info": {
-    "name": "E-commerce (protocolo 1.3.1)",
-    "description": "Rotas da 1ª entrega. Troque a variável baseUrl para testar o servidor de um colega (ex.: http://192.168.0.50:8080/api/v1). Faça o login antes das rotas com token: ele salva token, sessionId e userId sozinho.",
+    "name": "E-commerce (protocolo 1.4.0)",
+    "description": "Rotas do protocolo 1.4.0. Troque a variável baseUrl para testar o servidor de um colega (ex.: http://192.168.0.50:8080/api/v1). Faça o login antes das rotas com token: ele salva token, sessionId e userId sozinho. Na pasta Produtos, comece pelo login do ADM (as escritas são só de ADM); o cadastro salva productId sozinho.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
-    { "key": "token", "value": "" },
-    { "key": "sessionId", "value": "" },
-    { "key": "userId", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "sessionId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    }
   ],
   "item": [
     {
-      "name": "1. Cadastrar usuário",
-      "request": {
-        "auth": { "type": "noauth" },
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nome\": \"Gabriel Siqueira\",\n  \"email\": \"gabriel@teste.com\",\n  \"senha\": \"senha123\"\n}"
-        },
-        "url": "{{baseUrl}}/users"
-      },
-      "event": [
+      "name": "Usuários e sessões",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "if (pm.response.code === 201) {",
-              "  pm.collectionVariables.set('userId', pm.response.json().id);",
-              "}"
-            ]
+          "name": "1. Cadastrar usuário",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Gabriel Siqueira\",\n  \"email\": \"gabriel@teste.com\",\n  \"senha\": \"senha123\"\n}"
+            },
+            "url": "{{baseUrl}}/users"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('userId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Login",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"gabriel@teste.com\",\n  \"senha\": \"senha123\"\n}"
+            },
+            "url": "{{baseUrl}}/sessions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('token', body.token);",
+                  "  pm.collectionVariables.set('sessionId', body.id);",
+                  "  pm.collectionVariables.set('userId', body.usuario.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Ver usuário",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "4. Atualizar usuário (PUT, todos os campos)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Gabriel Siqueira\",\n  \"email\": \"gabriel@teste.com\",\n  \"senha\": \"senha123\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "5. Atualizar usuário (PATCH, só o que mudar)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Gabriel S.\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "6. Logout",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/sessions/{{sessionId}}"
+          }
+        },
+        {
+          "name": "7. Excluir usuário",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/{{userId}}"
           }
         }
       ]
     },
     {
-      "name": "2. Login",
-      "request": {
-        "auth": { "type": "noauth" },
-        "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"email\": \"gabriel@teste.com\",\n  \"senha\": \"senha123\"\n}"
-        },
-        "url": "{{baseUrl}}/sessions"
-      },
-      "event": [
+      "name": "Produtos",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "if (pm.response.code === 201) {",
-              "  const body = pm.response.json();",
-              "  pm.collectionVariables.set('token', body.token);",
-              "  pm.collectionVariables.set('sessionId', body.id);",
-              "  pm.collectionVariables.set('userId', body.usuario.id);",
-              "}"
-            ]
+          "name": "1. Login como ADM",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@loja.com\",\n  \"senha\": \"admin123\"\n}"
+            },
+            "url": "{{baseUrl}}/sessions",
+            "description": "Use o ADMIN_EMAIL/ADMIN_SENHA do .env (o ADM é criado com npm run db:seed)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('token', body.token);",
+                  "  pm.collectionVariables.set('sessionId', body.id);",
+                  "  pm.collectionVariables.set('userId', body.usuario.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Cadastrar produto (ADM)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teclado mecânico\",\n  \"descricao\": \"Teclado ABNT2 com switch azul\",\n  \"quantidade\": 15\n}"
+            },
+            "url": "{{baseUrl}}/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('productId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Listar produtos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products"
+          }
+        },
+        {
+          "name": "4. Ver produto (consultar estoque)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/products/{{productId}}"
+          }
+        },
+        {
+          "name": "5. Atualizar produto (PUT, todos os campos, ADM)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Teclado mecânico RGB\",\n  \"descricao\": \"Teclado ABNT2 com switch vermelho\",\n  \"quantidade\": 20\n}"
+            },
+            "url": "{{baseUrl}}/products/{{productId}}"
+          }
+        },
+        {
+          "name": "6. Atualizar estoque (PATCH, ADM)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantidade\": 7\n}"
+            },
+            "url": "{{baseUrl}}/products/{{productId}}"
+          }
+        },
+        {
+          "name": "7. Remover produto (ADM)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/products/{{productId}}"
           }
         }
       ]
-    },
-    {
-      "name": "3. Ver usuário",
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/users/{{userId}}"
-      }
-    },
-    {
-      "name": "4. Atualizar usuário (PUT, todos os campos)",
-      "request": {
-        "method": "PUT",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nome\": \"Gabriel Siqueira\",\n  \"email\": \"gabriel@teste.com\",\n  \"senha\": \"senha123\"\n}"
-        },
-        "url": "{{baseUrl}}/users/{{userId}}"
-      }
-    },
-    {
-      "name": "5. Atualizar usuário (PATCH, só o que mudar)",
-      "request": {
-        "method": "PATCH",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nome\": \"Gabriel S.\"\n}"
-        },
-        "url": "{{baseUrl}}/users/{{userId}}"
-      }
-    },
-    {
-      "name": "6. Logout",
-      "request": {
-        "method": "DELETE",
-        "url": "{{baseUrl}}/sessions/{{sessionId}}"
-      }
-    },
-    {
-      "name": "7. Excluir usuário",
-      "request": {
-        "method": "DELETE",
-        "url": "{{baseUrl}}/users/{{userId}}"
-      }
     }
   ]
 }
