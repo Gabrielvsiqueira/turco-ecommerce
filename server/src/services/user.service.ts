@@ -1,24 +1,37 @@
 import { Prisma, type User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../database/prisma.js';
+import type { AuthContext } from '../data/session-data.js';
 import type { UserData, UserPatchData } from '../data/user-data.js';
 import { ConflictError } from '../errors/api-errors.js';
-import { activityLog } from '../logging/activity-log.js';
+import { activityLog, type Who } from '../logging/activity-log.js';
 
 const BCRYPT_ROUNDS = 10;
 const EMAIL_EM_USO = 'E-mail já cadastrado.';
 
-/** Regras de negócio de usuário (cadastro, e-mail único, exclusão). */
+/**
+ * Regras de negócio de usuário (cadastro, listagem, e-mail único, exclusão).
+ *
+ * O papel ADM nunca é alterado aqui: nenhum método recebe ou grava isAdmin
+ * (o campo "admin" do corpo já é descartado na validação, regra 7).
+ * Quem pode mexer em quem é decidido antes, nos middlewares da rota.
+ */
 export const userService = {
   findById(id: number): Promise<User | null> {
     return prisma.user.findUnique({ where: { id } });
   },
 
+  /** GET /users (só ADM): todos, por id crescente, sem paginação (regra 16). */
+  list(): Promise<User[]> {
+    return prisma.user.findMany({ orderBy: { id: 'asc' } });
+  },
+
+  /** Cadastro público: sempre cria usuário comum (isAdmin tem default false). */
   async create(data: UserData): Promise<User> {
     const email = data.email.toLowerCase();
     await ensureEmailAvailable(email);
 
-    return withUniqueEmail(async () =>
+    const user = await withUniqueEmail(async () =>
       prisma.user.create({
         data: {
           name: data.nome,
@@ -27,17 +40,20 @@ export const userService = {
         },
       }),
     );
+
+    await activityLog.registered(user);
+    return user;
   },
 
-  /** Serve para PUT (todos os campos) e PATCH (só os enviados). */
-  async update(id: number, data: UserPatchData): Promise<User> {
+  /** Serve para PUT (todos os campos) e PATCH (só os enviados). actor = dono do token. */
+  async update(id: number, data: UserPatchData, actor: AuthContext): Promise<User> {
     const email = data.email?.toLowerCase();
     if (email !== undefined) {
       // O próprio e-mail atual não conta como duplicado.
       await ensureEmailAvailable(email, id);
     }
 
-    return withUniqueEmail(async () =>
+    const user = await withUniqueEmail(async () =>
       prisma.user.update({
         where: { id },
         data: {
@@ -47,18 +63,26 @@ export const userService = {
         },
       }),
     );
+
+    const fields = (['nome', 'email', 'senha'] as const).filter((field) => data[field] !== undefined);
+    await activityLog.userUpdated(whoIs(actor), user, fields);
+    return user;
   },
 
-  /** Exclui o usuário e derruba todas as sessões dele da whitelist. */
-  async delete(user: User): Promise<void> {
+  /** Exclui o usuário e derruba todas as sessões dele da whitelist. actor = dono do token. */
+  async delete(user: User, actor: AuthContext): Promise<void> {
     const [closed] = await prisma.$transaction([
       prisma.session.deleteMany({ where: { userId: user.id } }),
       prisma.user.delete({ where: { id: user.id } }),
     ]);
 
-    await activityLog.accountDeleted(user, closed.count);
+    await activityLog.userDeleted(whoIs(actor), user, closed.count);
   },
 };
+
+function whoIs(auth: AuthContext): Who {
+  return { id: auth.userId, name: auth.name, email: auth.email, isAdmin: auth.isAdmin };
+}
 
 /** Regra 8: e-mails são salvos em minúsculo, então a comparação já ignora caixa. */
 async function ensureEmailAvailable(email: string, ignoreUserId?: number): Promise<void> {

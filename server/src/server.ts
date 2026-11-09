@@ -1,5 +1,7 @@
+import './env.js';
 import { app } from './app.js';
 import { config } from './config.js';
+import { activityLog } from './logging/activity-log.js';
 
 // No Express 5 o callback do listen também recebe o erro (ex.: porta ocupada).
 app.listen(config.port, config.host, (error?: Error) => {
@@ -14,5 +16,5 @@ app.listen(config.port, config.host, (error?: Error) => {
     process.exit(1);
   }
 
-  console.log(`Servidor ouvindo em http://${config.host}:${config.port}/api/v1`);
+  void activityLog.started(`http://${config.host}:${config.port}/api/v1`);
 });

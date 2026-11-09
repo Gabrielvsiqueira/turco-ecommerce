@@ -5,4 +5,9 @@
 export const config = {
   host: process.env.HOST ?? '0.0.0.0',
   port: Number(process.env.PORT ?? 8080),
+  /**
+   * Painel de usuários logados no console. PAINEL=off volta para o log em
+   * linhas (útil para depurar: o painel limpa a tela a cada evento).
+   */
+  panel: process.env.PAINEL !== 'off',
 };

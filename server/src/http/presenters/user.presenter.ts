@@ -5,12 +5,14 @@ export type UserResponse = {
   id: number;
   nome: string;
   email: string;
+  admin: boolean;
 };
 
 /**
  * Desacopla o banco do protocolo: a coluna se chama "name", o protocolo expõe
- * "nome". E a senha nunca sai (regra 11): nunca devolver o model direto.
+ * "nome" (e "isAdmin" vira "admin"). E a senha nunca sai (regra 11): nunca
+ * devolver o model direto.
  */
 export function presentUser(user: User): UserResponse {
-  return { id: user.id, nome: user.name, email: user.email };
+  return { id: user.id, nome: user.name, email: user.email, admin: user.isAdmin };
 }

@@ -16,8 +16,16 @@ export type CreatedSession = {
   user: User;
 };
 
-/** Quem está autenticado na requisição atual (preenchido pelo middleware de auth). */
+/**
+ * Quem está autenticado na requisição atual (preenchido pelo middleware de auth).
+ * O papel é lido do banco a cada requisição: promover alguém a ADM vale na hora,
+ * sem precisar logar de novo.
+ */
 export type AuthContext = {
   sessionId: string;
   userId: number;
+  isAdmin: boolean;
+  /** Nome e e-mail do dono do token, para o painel do console. */
+  name: string;
+  email: string;
 };

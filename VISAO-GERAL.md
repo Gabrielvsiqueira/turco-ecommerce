@@ -11,8 +11,9 @@ Trabalho prático de **Tecnologias Cliente-Servidor (UTFPR-PG)**. Cada aluno faz
 **servidor** que seguem o mesmo **protocolo da turma** (um arquivo OpenAPI/YAML). No dia da
 integração, qualquer cliente precisa funcionar com o servidor de qualquer colega.
 
-A 1ª entrega cobre **autenticação** (login/logout) e **CRUD do próprio usuário**. As próximas
-entregas vão adicionar o e-commerce em si (produtos, carrinho, pedidos...).
+A 1ª entrega cobre **autenticação** (login/logout) e **CRUD do próprio usuário**. A 2ª entrega
+(protocolo 1.4.0) adiciona o papel **ADM** (administra qualquer usuário) e o **CRUD de produtos** com
+estoque. No servidor, o ADM já está pronto; produtos e as telas de ADM no cliente estão em andamento.
 
 | Parte        | Tecnologia                                                | Papel                                                                        |
 | ------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -51,12 +52,13 @@ Todas começam com `/api/v1`. "Pública" = não exige token.
 | Rota                       | Acesso  | O que faz                                             | Sucesso                      | Erros possíveis         |
 | -------------------------- | ------- | ----------------------------------------------------- | ---------------------------- | ----------------------- |
 | `POST /sessions`           | pública | Login: confere e-mail e senha e cria uma sessão nova  | `201` `{id, token, usuario}` | 400, 401                |
-| `DELETE /sessions/{id}`    | token   | Logout: encerra uma sessão do próprio usuário         | `204`                        | 401, 403, 404           |
-| `POST /users`              | pública | Cadastro de usuário                                   | `201` `{id, nome, email}`    | 400, 409                |
-| `GET /users/{id}`          | token   | Dados do próprio usuário                              | `200`                        | 400, 401, 403, 404      |
-| `PUT /users/{id}`          | token   | Troca nome, e-mail **e** senha (os três obrigatórios) | `200`                        | 400, 401, 403, 404, 409 |
-| `PATCH /users/{id}`        | token   | Troca só os campos enviados                           | `200`                        | 400, 401, 403, 404, 409 |
-| `DELETE /users/{id}`       | token   | Exclui a conta e encerra **todas** as sessões dela    | `204`                        | 400, 401, 403, 404      |
+| `DELETE /sessions/{id}`    | token   | Logout: encerra uma sessão do próprio usuário (nem o ADM encerra a de outro) | `204` | 401, 403, 404 |
+| `POST /users`              | pública | Cadastro de usuário (sempre comum, `admin: false`)    | `201` `{id, nome, email, admin}` | 400, 409            |
+| `GET /users`               | ADM     | Lista todos os usuários, por id crescente             | `200` `[…]`                  | 401, 403                |
+| `GET /users/{id}`          | dono/ADM | Dados do usuário                                     | `200`                        | 400, 401, 403, 404      |
+| `PUT /users/{id}`          | dono/ADM | Troca nome, e-mail **e** senha (os três obrigatórios) | `200`                       | 400, 401, 403, 404, 409 |
+| `PATCH /users/{id}`        | dono/ADM | Troca só os campos enviados                          | `200`                        | 400, 401, 403, 404, 409 |
+| `DELETE /users/{id}`       | dono/ADM | Exclui a conta e encerra **todas** as sessões dela   | `204`                        | 400, 401, 403, 404      |
 | `OPTIONS` em qualquer rota | pública | Preflight de CORS do navegador                        | `204`                        | —                       |
 
 Regras gerais garantidas pelo servidor (numeradas como no README do protocolo):
@@ -66,13 +68,17 @@ Regras gerais garantidas pelo servidor (numeradas como no README do protocolo):
 - **Nome (regra 9):** espaços nas pontas são removidos antes de validar e salvar.
 - **Senha (regra 11):** guardada como hash bcrypt e nunca devolvida em nenhuma resposta.
 - **Tipos (regra 13):** número, booleano ou `null` onde se espera texto dá `400`. Nada é convertido.
+- **Papel ADM (regra 4):** `admin` vem em toda resposta de usuário. Nenhuma rota muda o papel (campo
+  `admin` no corpo é ignorado); ADMs são criados pelos scripts `db:seed` e `make-admin`.
 - **Sessões (regra 14):** cada login cria uma sessão independente. A pessoa pode estar logada em vários lugares.
 - **Rotas (regra 15):** rota inexistente dá `404`, método não suportado dá `405`.
 - **Ordem dos erros (regra 10):** com vários problemas, vale o primeiro desta lista:
 
 ```
-401 token → 400 id da URL → 403 não é seu → 404 não existe → 400 corpo → 409 e-mail repetido
+401 token → 400 id da URL → 403 sem permissão → 404 não existe → 400 corpo → 409 e-mail repetido
 ```
+
+  Para o usuário comum, id de outra pessoa (exista ou não) dá sempre `403`. Para o ADM, id inexistente dá `404`.
 
 ### 3.2 Telas (cliente)
 
@@ -92,13 +98,21 @@ Comportamentos importantes:
   o servidor**, e a mensagem dele é sempre mostrada.
 - Erros de rede (servidor fora do ar, IP errado) viram "Não foi possível conectar ao servidor".
 
-### 3.3 Log de atividade (terminal do servidor)
+### 3.3 Painel do console (terminal do servidor)
 
-A cada login, logout ou exclusão de conta, o servidor mostra quem foi e quem continua logado:
+O terminal do servidor vira um painel com **quem está logado agora** e os **últimos eventos** (login,
+logout, cadastro, alteração, exclusão, erros 500), redesenhado a cada evento. `PAINEL=off` no `.env`
+volta para o log em linhas.
 
 ```
-[2026-10-03 21:17:45] ENTROU          Maria <maria@exemplo.com> (id 2) · sessão c79de5b5-…
-                      ↳ logados agora: 2 · João <joao@exemplo.com> (2 sessões), Maria <maria@exemplo.com>
+┌─ Servidor http://0.0.0.0:8080/api/v1 ──────────────────────────────────────┐
+│ LOGADOS (2)                                                                │
+│   Administrador <admin@loja.com> (ADM) · 2 sessões                         │
+│   Maria <maria@x.com> · 1 sessão                                           │
+├─ ÚLTIMOS EVENTOS ──────────────────────────────────────────────────────────┤
+│ 14:25:37 ENTROU    Maria <maria@x.com> (id 2) · sessão cc358e27…           │
+│ 14:26:02 ALTEROU   Administrador (ADM) → Maria <maria@x.com> (id 2) · nome │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -115,12 +129,12 @@ requisição
    ├─ routes (/api/v1) ───────── encontra a rota PATCH /users/:id
    │     ├─ authenticate ─────── token existe e está ativo?               não → 401
    │     ├─ validateUserId ───── "7" é um inteiro?                        não → 400
-   │     ├─ ensureOwnsUser ───── 7 é o id do dono do token?               não → 403
+   │     ├─ ensureOwnerOrAdmin ─ 7 é do dono do token, ou ele é ADM?     não → 403
    │     ├─ loadUser ─────────── usuário 7 existe no banco?               não → 404
    │     └─ userController.update
    │           ├─ parseBody ──── JSON válido e dentro das regras do YAML?  não → 400
    │           ├─ userService ── e-mail já é de outra pessoa?              sim → 409
-   │           └─ presentUser ── monta {id, nome, email} (sem senha)       → 200
+   │           └─ presentUser ── monta {id, nome, email, admin} (sem senha) → 200
    │
    └─ errorHandler ───────────── qualquer erro lançado acima vira {"mensagem": "..."}
 ```
@@ -139,7 +153,7 @@ de 401 ou 403.
 | ------------------------------------------- | ------------------------------------------------------------------------------- |
 | `claude.md`                                 | Contexto do projeto: decisões, armadilhas do protocolo, status e como trabalhar |
 | `VISAO-GERAL.md`                            | Este arquivo                                                                    |
-| `protocolo/protocolo-cliente-servidor.yaml` | Cópia local do protocolo da turma (v1.3.1). Fonte da verdade                    |
+| `protocolo/protocolo-cliente-servidor.yaml` | Cópia local do protocolo da turma (v1.4.0). Fonte da verdade                    |
 | `server/`                                   | API                                                                             |
 | `client/`                                   | Interface web                                                                   |
 
@@ -176,7 +190,7 @@ server/
 
 | Modelo    | Tabela     | Campos                                                            | Observação                                             |
 | --------- | ---------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
-| `User`    | `users`    | `id` (inteiro), `name`, `email` (único), `password` (hash), datas | No protocolo, `name` aparece como `nome`               |
+| `User`    | `users`    | `id` (inteiro), `name`, `email` (único), `password` (hash), `isAdmin`, datas | No protocolo, `name` aparece como `nome` e `isAdmin` como `admin` |
 | `Session` | `sessions` | `id` (UUID), `tokenHash` (único), `userId`, `createdAt`           | Cada linha é uma sessão ativa. Logout = apagar a linha |
 
 O token entregue no login **não fica salvo**: o banco guarda só o hash SHA-256 dele. Se o banco vazar,
@@ -189,20 +203,24 @@ os tokens continuam seguros.
 | `server.ts`                              | Sobe o servidor. Se a porta estiver ocupada, explica o que fazer e encerra                                                                                             |
 | `app.ts`                                 | Ordem global: CORS → corpo cru → rotas `/api/v1` → 404 → tratamento de erros. Desliga `X-Powered-By` e ETag                                                            |
 | `routes.ts`                              | Declara cada rota com seus middlewares e o 405 para métodos não suportados                                                                                             |
-| `config.ts`                              | `HOST` (padrão `0.0.0.0`, para colegas acessarem pelo IP) e `PORT` (padrão `8080`)                                                                                     |
+| `env.ts`                                 | Carrega o `.env` antes de qualquer outro módulo (servidor e scripts)                                                                                                   |
+| `config.ts`                              | `HOST` (padrão `0.0.0.0`, para colegas acessarem pelo IP), `PORT` (padrão `8080`) e `PAINEL` (`off` desliga o painel)                                                  |
 | `database/prisma.ts`                     | Uma única conexão Prisma para a aplicação toda                                                                                                                         |
-| `data/session-data.ts`                   | Tipos `LoginData`, `CreatedSession` e `AuthContext` (quem está autenticado)                                                                                            |
+| `data/session-data.ts`                   | Tipos `LoginData`, `CreatedSession` e `AuthContext` (quem está autenticado, com o papel lido do banco a cada requisição)                                               |
 | `data/user-data.ts`                      | Tipos `UserData` (cadastro/PUT) e `UserPatchData` (PATCH)                                                                                                              |
 | `errors/api-errors.ts`                   | `BadRequestError`, `UnauthorizedError`, `InvalidCredentialsError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `ConflictError`, cada um com seu status |
 | `services/session.service.ts`            | Login (confere a senha e cria a sessão), busca a sessão pelo token, logout (403 se a sessão for de outro, 404 se não existir)                                          |
-| `services/user.service.ts`               | Cadastro, atualização (PUT/PATCH) e exclusão. Garante e-mail único (409), inclusive com duas requisições simultâneas                                                   |
+| `services/user.service.ts`               | Cadastro, listagem (ADM), atualização (PUT/PATCH) e exclusão. Garante e-mail único (409), inclusive com duas requisições simultâneas. Nunca altera o papel             |
 | `services/token.ts`                      | Gera o token aleatório e calcula o hash dele                                                                                                                           |
-| `logging/activity-log.ts`                | Imprime ENTROU / SAIU / EXCLUIU A CONTA e quem está logado agora. Nunca derruba a requisição                                                                           |
+| `logging/activity-log.ts`                | Painel do console: logados agora + últimos eventos (ENTROU, SAIU, CADASTROU, ALTEROU, EXCLUIU, ERRO 500). Nunca derruba a requisição                                  |
+| `scripts/seed.ts`                        | `npm run db:seed`: cria o ADM do `.env` ou promove o e-mail se já existir (fora do protocolo)                                                                         |
+| `scripts/make-admin.ts`                  | `npm run make-admin -- email`: promove um usuário já cadastrado a ADM                                                                                                 |
 | `types/express.d.ts`                     | Declara o que os middlewares deixam em `res.locals` (`auth`, `targetUserId`, `user`)                                                                                   |
 | `http/middlewares/protocol-cors.ts`      | CORS em toda resposta. `OPTIONS` → 204                                                                                                                                 |
 | `http/middlewares/authenticate.ts`       | Lê `Authorization: Bearer <token>` e confere se a sessão existe → 401                                                                                                  |
 | `http/middlewares/validate-user-id.ts`   | O `{id}` da URL precisa ser inteiro → 400                                                                                                                              |
-| `http/middlewares/ensure-owns-user.ts`   | O `{id}` precisa ser o do dono do token, conferido sem ir ao banco → 403                                                                                               |
+| `http/middlewares/ensure-owner-or-admin.ts` | O `{id}` precisa ser o do dono do token, ou o dono ser ADM, conferido sem ir ao banco → 403                                                                         |
+| `http/middlewares/require-admin.ts`      | Rotas exclusivas de ADM (`GET /users`) → 403                                                                                                                           |
 | `http/middlewares/load-user.ts`          | Busca o usuário no banco → 404                                                                                                                                         |
 | `http/middlewares/fallbacks.ts`          | 404 para rota inexistente e 405 para método não suportado                                                                                                              |
 | `http/middlewares/error-handler.ts`      | **Único** lugar que transforma erro em resposta `{"mensagem": ...}`. Erro inesperado → 500, com o detalhe só no log                                                    |

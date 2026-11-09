@@ -6,10 +6,17 @@ import { userPatchRequest, userRequest } from '../validation/schemas.js';
 
 /**
  * Nas rotas /users/{id}, quando o controller roda, os middlewares já
- * garantiram token válido, id bem formatado, dono certo e usuário existente
- * (res.locals.user). Falta só o corpo (400) e o service (409).
+ * garantiram token válido, id bem formatado, permissão (dono ou ADM) e usuário
+ * existente (res.locals.user). Falta só o corpo (400) e o service (409).
  */
 export const userController = {
+  /** GET /api/v1/users (só ADM; o requireAdmin já barrou o usuário comum). */
+  index: (async (_req, res) => {
+    const users = await userService.list();
+
+    res.status(200).json(users.map(presentUser));
+  }) satisfies RequestHandler,
+
   /** POST /api/v1/users (cadastro) */
   store: (async (req, res) => {
     const data = parseBody(req, userRequest);
@@ -26,7 +33,7 @@ export const userController = {
   /** PUT /api/v1/users/{id}: exige nome, email e senha juntos. */
   replace: (async (req, res) => {
     const data = parseBody(req, userRequest);
-    const user = await userService.update(res.locals.user.id, data);
+    const user = await userService.update(res.locals.user.id, data, res.locals.auth);
 
     res.status(200).json(presentUser(user));
   }) satisfies RequestHandler,
@@ -34,14 +41,14 @@ export const userController = {
   /** PATCH /api/v1/users/{id}: só o que for enviado muda. */
   update: (async (req, res) => {
     const data = parseBody(req, userPatchRequest);
-    const user = await userService.update(res.locals.user.id, data);
+    const user = await userService.update(res.locals.user.id, data, res.locals.auth);
 
     res.status(200).json(presentUser(user));
   }) satisfies RequestHandler,
 
   /** DELETE /api/v1/users/{id}: também derruba todas as sessões do usuário. */
   destroy: (async (_req, res) => {
-    await userService.delete(res.locals.user);
+    await userService.delete(res.locals.user, res.locals.auth);
 
     res.status(204).end();
   }) satisfies RequestHandler,

@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from 'express';
 import { ApiError, MethodNotAllowedError } from '../../errors/api-errors.js';
+import { activityLog } from '../../logging/activity-log.js';
 
 /**
  * Regra 6: todo erro sai como {"mensagem": "..."}, sempre JSON,
@@ -25,7 +26,7 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     return;
   }
 
-  // Regra 12: falha inesperada -> 500. O detalhe vai pro log, não pro cliente.
-  console.error(error);
+  // Regra 12: falha inesperada -> 500. O detalhe vai pro painel/log, não pro cliente.
+  void activityLog.failed(error);
   res.status(500).json({ mensagem: 'Erro interno do servidor.' });
 };

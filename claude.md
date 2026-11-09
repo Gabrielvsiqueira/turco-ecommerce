@@ -12,7 +12,7 @@ O que garante isso é um **protocolo compartilhado pela turma** (OpenAPI 3.0.3):
 
 - Repositório: https://github.com/JoseMarra2006/protocolo-cliente-servidor
 - Swagger publicado: https://josemarra2006.github.io/protocolo-cliente-servidor/
-- Cópia local: `protocolo/protocolo-cliente-servidor.yaml` (versão **1.3.1** quando este arquivo foi escrito)
+- Cópia local: `protocolo/protocolo-cliente-servidor.yaml` (versão **1.4.0**)
 
 **O YAML + o README do repositório do protocolo são a fonte da verdade.** Se o código divergir do protocolo,
 o código está errado. Mudanças no protocolo são propostas à turma via issue/PR, nunca decididas só aqui.

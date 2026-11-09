@@ -35,10 +35,18 @@ export const sessionService = {
   async findByToken(token: string): Promise<AuthContext | null> {
     const session = await prisma.session.findUnique({
       where: { tokenHash: hashToken(token) },
-      select: { id: true, userId: true },
+      select: { id: true, user: { select: { id: true, name: true, email: true, isAdmin: true } } },
     });
 
-    return session && { sessionId: session.id, userId: session.userId };
+    return (
+      session && {
+        sessionId: session.id,
+        userId: session.user.id,
+        isAdmin: session.user.isAdmin,
+        name: session.user.name,
+        email: session.user.email,
+      }
+    );
   },
 
   /**
@@ -46,11 +54,12 @@ export const sessionService = {
    * ao banco (o id da sessão não diz de quem ela é), então 403 e 404 saem
    * da mesma consulta: sessão de outro usuário -> 403; inexistente -> 404.
    * O usuário pode encerrar qualquer sessão própria, não só a do token atual.
+   * Ser ADM não muda nada aqui: sessão de outra pessoa sempre dá 403.
    */
   async delete(sessionId: string, auth: AuthContext): Promise<void> {
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      select: { userId: true, user: { select: { id: true, name: true, email: true } } },
+      select: { userId: true, user: { select: { id: true, name: true, email: true, isAdmin: true } } },
     });
 
     if (session === null) {

@@ -10,7 +10,9 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "db:seed": "tsx src/scripts/seed.ts",
+    "make-admin": "tsx src/scripts/make-admin.ts"
   },
   "engines": {
     "node": ">=22"
