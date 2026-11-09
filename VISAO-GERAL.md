@@ -13,7 +13,7 @@ integração, qualquer cliente precisa funcionar com o servidor de qualquer cole
 
 A 1ª entrega cobre **autenticação** (login/logout) e **CRUD do próprio usuário**. A 2ª entrega
 (protocolo 1.4.0) adiciona o papel **ADM** (administra qualquer usuário) e o **CRUD de produtos** com
-estoque. O ADM já está pronto no servidor e no cliente; produtos estão em andamento.
+estoque. O ADM já está pronto no servidor e no cliente; produtos estão prontos no servidor e em andamento no cliente.
 
 | Parte        | Tecnologia                                                | Papel                                                                        |
 | ------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -59,13 +59,21 @@ Todas começam com `/api/v1`. "Pública" = não exige token.
 | `PUT /users/{id}`          | dono/ADM | Troca nome, e-mail **e** senha (os três obrigatórios) | `200`                       | 400, 401, 403, 404, 409 |
 | `PATCH /users/{id}`        | dono/ADM | Troca só os campos enviados                          | `200`                        | 400, 401, 403, 404, 409 |
 | `DELETE /users/{id}`       | dono/ADM | Exclui a conta e encerra **todas** as sessões dela   | `204`                        | 400, 401, 403, 404      |
+| `GET /products`            | token   | Lista todos os produtos (com estoque), por id crescente | `200` `[…]`                | 401                     |
+| `POST /products`           | ADM     | Cadastra produto (nomes repetidos são permitidos)     | `201` `{id, nome, descricao, quantidade}` | 400, 401, 403 |
+| `GET /products/{id}`       | token   | Consulta um produto e o estoque                       | `200`                        | 400, 401, 404           |
+| `PUT /products/{id}`       | ADM     | Troca nome, descrição **e** quantidade (os três obrigatórios) | `200`                | 400, 401, 403, 404      |
+| `PATCH /products/{id}`     | ADM     | Troca só os campos enviados (ex.: só o estoque)       | `200`                        | 400, 401, 403, 404      |
+| `DELETE /products/{id}`    | ADM     | Remove o produto                                      | `204`                        | 400, 401, 403, 404      |
 | `OPTIONS` em qualquer rota | pública | Preflight de CORS do navegador                        | `204`                        | —                       |
 
 Regras gerais garantidas pelo servidor (numeradas como no README do protocolo):
 
 - **CORS (regra 5):** toda resposta, inclusive de erro, leva os três cabeçalhos `Access-Control-Allow-*`.
 - **E-mail (regra 8):** salvo e comparado sempre em minúsculo, então `Ana@X.com` e `ana@x.com` são o mesmo e-mail.
-- **Nome (regra 9):** espaços nas pontas são removidos antes de validar e salvar.
+- **Nome e descrição (regra 9):** espaços nas pontas são removidos antes de validar e salvar (nome do usuário,
+  nome e descrição do produto).
+- **Quantidade:** inteiro JSON de 0 a 1.000.000. Texto (`"10"`), decimal (`1.5`) ou negativo dá `400`.
 - **Senha (regra 11):** guardada como hash bcrypt e nunca devolvida em nenhuma resposta.
 - **Tipos (regra 13):** número, booleano ou `null` onde se espera texto dá `400`. Nada é convertido.
 - **Papel ADM (regra 4):** `admin` vem em toda resposta de usuário. Nenhuma rota muda o papel (campo
@@ -78,7 +86,8 @@ Regras gerais garantidas pelo servidor (numeradas como no README do protocolo):
 401 token → 400 id da URL → 403 sem permissão → 404 não existe → 400 corpo → 409 e-mail repetido
 ```
 
-  Para o usuário comum, id de outra pessoa (exista ou não) dá sempre `403`. Para o ADM, id inexistente dá `404`.
+  Para o usuário comum, id de outra pessoa (exista ou não) dá sempre `403`, assim como qualquer escrita em
+  produto. Para o ADM, id inexistente dá `404`.
 
 ### 3.2 Telas (cliente)
 
@@ -106,7 +115,7 @@ Comportamentos importantes:
 ### 3.3 Painel do console (terminal do servidor)
 
 O terminal do servidor vira um painel com **quem está logado agora** e os **últimos eventos** (login,
-logout, cadastro, alteração, exclusão, erros 500), redesenhado a cada evento. `PAINEL=off` no `.env`
+logout, cadastro, alteração, exclusão, produtos, erros 500), redesenhado a cada evento. `PAINEL=off` no `.env`
 volta para o log em linhas.
 
 ```
@@ -133,7 +142,7 @@ requisição
    ├─ express.raw ────────────── só guarda o corpo cru (ainda não interpreta o JSON)
    ├─ routes (/api/v1) ───────── encontra a rota PATCH /users/:id
    │     ├─ authenticate ─────── token existe e está ativo?               não → 401
-   │     ├─ validateUserId ───── "7" é um inteiro?                        não → 400
+   │     ├─ validateId ───────── "7" é um inteiro?                        não → 400
    │     ├─ ensureOwnerOrAdmin ─ 7 é do dono do token, ou ele é ADM?     não → 403
    │     ├─ loadUser ─────────── usuário 7 existe no banco?               não → 404
    │     └─ userController.update
@@ -170,7 +179,7 @@ server/
 ├── package.json            dependências e scripts (dev, build, start, db:migrate, db:reset)
 ├── tsconfig.json           configuração do TypeScript
 ├── prisma/
-│   ├── schema.prisma       modelos do banco (User, Session)
+│   ├── schema.prisma       modelos do banco (User, Session, Product)
 │   ├── migrations/         histórico de alterações do banco, em SQL
 │   └── dev.db              o banco SQLite (não vai pro git)
 └── src/
@@ -197,6 +206,7 @@ server/
 | --------- | ---------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
 | `User`    | `users`    | `id` (inteiro), `name`, `email` (único), `password` (hash), `isAdmin`, datas | No protocolo, `name` aparece como `nome` e `isAdmin` como `admin` |
 | `Session` | `sessions` | `id` (UUID), `tokenHash` (único), `userId`, `createdAt`           | Cada linha é uma sessão ativa. Logout = apagar a linha |
+| `Product` | `products` | `id` (inteiro), `name`, `description`, `quantity`, datas          | No protocolo: `nome`, `descricao`, `quantidade`        |
 
 O token entregue no login **não fica salvo**: o banco guarda só o hash SHA-256 dele. Se o banco vazar,
 os tokens continuam seguros.
@@ -213,29 +223,34 @@ os tokens continuam seguros.
 | `database/prisma.ts`                     | Uma única conexão Prisma para a aplicação toda                                                                                                                         |
 | `data/session-data.ts`                   | Tipos `LoginData`, `CreatedSession` e `AuthContext` (quem está autenticado, com o papel lido do banco a cada requisição)                                               |
 | `data/user-data.ts`                      | Tipos `UserData` (cadastro/PUT) e `UserPatchData` (PATCH)                                                                                                              |
+| `data/product-data.ts`                   | Tipos `ProductData` (cadastro/PUT) e `ProductPatchData` (PATCH)                                                                                                        |
 | `errors/api-errors.ts`                   | `BadRequestError`, `UnauthorizedError`, `InvalidCredentialsError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `ConflictError`, cada um com seu status |
 | `services/session.service.ts`            | Login (confere a senha e cria a sessão), busca a sessão pelo token, logout (403 se a sessão for de outro, 404 se não existir)                                          |
 | `services/user.service.ts`               | Cadastro, listagem (ADM), atualização (PUT/PATCH) e exclusão. Garante e-mail único (409), inclusive com duas requisições simultâneas. Nunca altera o papel             |
+| `services/product.service.ts`            | Cadastro, listagem, atualização (PUT/PATCH) e remoção de produtos, registrando cada escrita no painel                                                                  |
 | `services/token.ts`                      | Gera o token aleatório e calcula o hash dele                                                                                                                           |
-| `logging/activity-log.ts`                | Painel do console: logados agora + últimos eventos (ENTROU, SAIU, CADASTROU, ALTEROU, EXCLUIU, ERRO 500). Nunca derruba a requisição                                  |
+| `logging/activity-log.ts`                | Painel do console: logados agora + últimos eventos (ENTROU, SAIU, CADASTROU, ALTEROU, EXCLUIU, PRODUTO, ERRO 500). Nunca derruba a requisição                                  |
 | `scripts/seed.ts`                        | `npm run db:seed`: cria o ADM do `.env` ou promove o e-mail se já existir (fora do protocolo)                                                                         |
 | `scripts/make-admin.ts`                  | `npm run make-admin -- email`: promove um usuário já cadastrado a ADM                                                                                                 |
-| `types/express.d.ts`                     | Declara o que os middlewares deixam em `res.locals` (`auth`, `targetUserId`, `user`)                                                                                   |
+| `types/express.d.ts`                     | Declara o que os middlewares deixam em `res.locals` (`auth`, `targetId`, `user`, `product`)                                                                                   |
 | `http/middlewares/protocol-cors.ts`      | CORS em toda resposta. `OPTIONS` → 204                                                                                                                                 |
 | `http/middlewares/authenticate.ts`       | Lê `Authorization: Bearer <token>` e confere se a sessão existe → 401                                                                                                  |
-| `http/middlewares/validate-user-id.ts`   | O `{id}` da URL precisa ser inteiro → 400                                                                                                                              |
+| `http/middlewares/validate-id.ts`        | O `{id}` da URL precisa ser inteiro → 400                                                                                                                              |
 | `http/middlewares/ensure-owner-or-admin.ts` | O `{id}` precisa ser o do dono do token, ou o dono ser ADM, conferido sem ir ao banco → 403                                                                         |
-| `http/middlewares/require-admin.ts`      | Rotas exclusivas de ADM (`GET /users`) → 403                                                                                                                           |
+| `http/middlewares/require-admin.ts`      | Rotas exclusivas de ADM (`GET /users`, escritas de `/products`) → 403                                                                                                                           |
 | `http/middlewares/load-user.ts`          | Busca o usuário no banco → 404                                                                                                                                         |
+| `http/middlewares/load-product.ts`       | Busca o produto no banco → 404                                                                                                                                         |
 | `http/middlewares/fallbacks.ts`          | 404 para rota inexistente e 405 para método não suportado                                                                                                              |
 | `http/middlewares/error-handler.ts`      | **Único** lugar que transforma erro em resposta `{"mensagem": ...}`. Erro inesperado → 500, com o detalhe só no log                                                    |
-| `http/validation/rules.ts`               | Regras de Email, Senha e Nome do YAML (tamanho, formato, trim, tipo)                                                                                                   |
-| `http/validation/schemas.ts`             | Corpos aceitos: `loginRequest`, `userRequest`, `userPatchRequest`                                                                                                      |
+| `http/validation/rules.ts`               | Regras de Email, Senha, Nome, NomeProduto, Descricao e Quantidade do YAML (tamanho, formato, trim, tipo)                                                                                                   |
+| `http/validation/schemas.ts`             | Corpos aceitos: `loginRequest`, `userRequest`, `userPatchRequest`, `productRequest`, `productPatchRequest`                                                                                                      |
 | `http/validation/parse-body.ts`          | Lê o JSON cru (com ou sem `Content-Type`), exige um objeto e devolve o primeiro erro encontrado                                                                        |
 | `http/controllers/session.controller.ts` | `store` (login, 201) e `destroy` (logout, 204)                                                                                                                         |
 | `http/controllers/user.controller.ts`    | `store` (201), `show` (200), `replace`/PUT (200), `update`/PATCH (200), `destroy` (204)                                                                                |
-| `http/presenters/user.presenter.ts`      | Model → `{id, nome, email}`. Garante que a senha nunca sai                                                                                                             |
+| `http/controllers/product.controller.ts` | `index` (200), `store` (201), `show` (200), `replace`/PUT (200), `update`/PATCH (200), `destroy` (204)                                                                 |
+| `http/presenters/user.presenter.ts`      | Model → `{id, nome, email, admin}`. Garante que a senha nunca sai                                                                                                             |
 | `http/presenters/session.presenter.ts`   | Sessão criada → `{id, token, usuario}`                                                                                                                                 |
+| `http/presenters/product.presenter.ts`   | Model → `{id, nome, descricao, quantidade}`                                                                                                                            |
 
 **Camadas do servidor, em uma frase cada:**
 
