@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router';
+import { isAdmin } from '../session/roles';
 import { useSession } from '../session/session-context';
 
 /**
@@ -17,4 +18,13 @@ export function RequireAuth() {
 export function RequireGuest() {
   const { session } = useSession();
   return session ? <Navigate to="/perfil" replace /> : <Outlet />;
+}
+
+/**
+ * Telas de administração: quem não é ADM volta pro próprio perfil.
+ * Vai dentro de RequireAuth, então a sessão já existe aqui.
+ */
+export function RequireAdmin() {
+  const { session } = useSession();
+  return isAdmin(session) ? <Outlet /> : <Navigate to="/perfil" replace />;
 }

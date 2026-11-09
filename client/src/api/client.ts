@@ -53,6 +53,9 @@ export function createApi({ serverUrl, token, onUnauthorized }: Options) {
 
     createUser: (body: UserRequest) => call(client.POST('/users', { body })),
 
+    /** GET /users: só ADM (usuário comum recebe 403). */
+    listUsers: () => authed(client.GET('/users')),
+
     getUser: (id: number) => authed(client.GET('/users/{id}', { params: { path: { id } } })),
 
     updateUser: (id: number, body: UserPatchRequest) =>

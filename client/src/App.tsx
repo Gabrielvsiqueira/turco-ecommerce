@@ -1,9 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
-import { RequireAuth, RequireGuest } from './components/RouteGuards';
+import { RequireAdmin, RequireAuth, RequireGuest } from './components/RouteGuards';
 import { LoginPage } from './pages/LoginPage';
-import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
+import { AdminUserPage, ProfilePage } from './pages/UserPage';
+import { UsersPage } from './pages/UsersPage';
 import { SessionProvider } from './session/SessionProvider';
 
 export function App() {
@@ -18,6 +19,10 @@ export function App() {
             </Route>
             <Route element={<RequireAuth />}>
               <Route path="/perfil" element={<ProfilePage />} />
+              <Route element={<RequireAdmin />}>
+                <Route path="/usuarios" element={<UsersPage />} />
+                <Route path="/usuarios/:id" element={<AdminUserPage />} />
+              </Route>
             </Route>
             <Route path="*" element={<Navigate to="/perfil" replace />} />
           </Route>

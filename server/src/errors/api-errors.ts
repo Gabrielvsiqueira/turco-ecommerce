@@ -1,9 +1,3 @@
-/**
- * Erros de domínio da API.
- *
- * Services e middlewares só lançam estes erros. Quem os transforma em resposta
- * HTTP ({"mensagem": ...}) é o error handler, num único lugar.
- */
 export abstract class ApiError extends Error {
   abstract readonly status: number;
 }
@@ -17,7 +11,7 @@ export class BadRequestError extends ApiError {
 export class UnauthorizedError extends ApiError {
   readonly status = 401;
 
-  constructor(message = 'Token ausente ou inválido.') {
+  constructor(message = "Token ausente ou inválido.") {
     super(message);
   }
 }
@@ -28,7 +22,7 @@ export class UnauthorizedError extends ApiError {
  */
 export class InvalidCredentialsError extends UnauthorizedError {
   constructor() {
-    super('E-mail ou senha inválidos.');
+    super("E-mail ou senha inválidos.");
   }
 }
 
@@ -47,7 +41,7 @@ export class MethodNotAllowedError extends ApiError {
   readonly status = 405;
 
   constructor(readonly allowed: string[]) {
-    super('Método não permitido nesta rota.');
+    super("Método não permitido nesta rota.");
   }
 }
 

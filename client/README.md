@@ -30,10 +30,10 @@ npm run typecheck    # o TypeScript aponta o que quebrou
 | `src/api/schema.ts` | Tipos gerados do YAML (openapi-typescript) |
 | `src/api/client.ts` | Chamadas da API (openapi-fetch), erros viram `ApiError` com mensagem pronta |
 | `src/api/server-url.ts` | Normaliza o endereço digitado e monta o `/api/v1` |
-| `src/session/*` | Servidor + sessão atuais, salvos no `localStorage`; 401 encerra a sessão |
+| `src/session/*` | Servidor + sessão atuais, salvos no `localStorage`; 401 encerra a sessão; `roles.ts` diz se é ADM |
 | `src/validation.ts` | Regras de Email/Senha/Nome do YAML, só para retorno rápido no formulário |
-| `src/pages/*` | Login, Cadastro e Perfil (ver, editar, sair, excluir conta) |
-| `src/components/*` | Campos, alertas, layout e guardas de rota |
+| `src/pages/*` | Login, Cadastro, Perfil (ver, editar, sair, excluir conta) e, para ADM, Usuários (lista) e o perfil de qualquer usuário |
+| `src/components/*` | Campos, alertas, layout com menu por papel e guardas de rota (`RequireAuth`, `RequireGuest`, `RequireAdmin`) |
 
 ## Problemas comuns
 

@@ -13,7 +13,7 @@ integração, qualquer cliente precisa funcionar com o servidor de qualquer cole
 
 A 1ª entrega cobre **autenticação** (login/logout) e **CRUD do próprio usuário**. A 2ª entrega
 (protocolo 1.4.0) adiciona o papel **ADM** (administra qualquer usuário) e o **CRUD de produtos** com
-estoque. No servidor, o ADM já está pronto; produtos e as telas de ADM no cliente estão em andamento.
+estoque. O ADM já está pronto no servidor e no cliente; produtos estão em andamento.
 
 | Parte        | Tecnologia                                                | Papel                                                                        |
 | ------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -87,12 +87,17 @@ Regras gerais garantidas pelo servidor (numeradas como no README do protocolo):
 | Entrar      | `/login`    | Escolhe o **servidor** (ip:porta) e faz login. Mostra avisos como "Conta criada", "Você saiu", "Sessão expirou" |
 | Criar conta | `/cadastro` | Escolhe o servidor e cadastra. Se o e-mail já existe (409), oferece um link para entrar com ele                 |
 | Perfil      | `/perfil`   | Mostra os dados, edita (envia só o que mudou), **Sair** e **Excluir conta** (com confirmação)                   |
+| Usuários    | `/usuarios` | **Só ADM.** Lista todos os usuários (`GET /users`) com id, nome, e-mail e papel                                  |
+| Usuário     | `/usuarios/:id` | **Só ADM.** A mesma tela de perfil para outra conta: edita e exclui (sem "Sair"; excluir volta para a lista) |
 
 Comportamentos importantes:
 
 - O **endereço do servidor** fica salvo no navegador. Trocar de servidor descarta a sessão, porque o
   token só vale no servidor que o emitiu.
 - A **sessão** (token) também fica salva: recarregar a página mantém o login.
+- O **papel** vem no `usuario` do login (`admin`). O menu **Usuários** e as telas de ADM só aparecem para
+  ADM, mas quem garante a permissão é o servidor (403). Ao abrir o perfil, o papel é relido do servidor.
+  Servidor que não manda `admin` (versão antiga do protocolo) = usuário comum.
 - Qualquer **401** numa tela logada encerra a sessão local e volta para o login com aviso.
 - Os formulários validam com as mesmas regras do YAML só para avisar antes de enviar. **Quem decide é
   o servidor**, e a mensagem dele é sempre mostrada.
@@ -277,11 +282,13 @@ client/
 | `components/Field.tsx`          | Campo de formulário com rótulo, dica e erro                                                                                                           |
 | `components/Alert.tsx`          | Caixa de aviso (erro, sucesso, informação)                                                                                                            |
 | `components/ServerUrlField.tsx` | Campo "Servidor" usado no login e no cadastro                                                                                                         |
-| `components/Layout.tsx`         | Cabeçalho com o servidor atual (bolinha verde = logado) e a área da página                                                                            |
-| `components/RouteGuards.tsx`    | `RequireAuth` (sem sessão → login, levando o aviso) e `RequireGuest` (com sessão → perfil)                                                            |
+| `components/Layout.tsx`         | Cabeçalho com o servidor atual (bolinha verde = logado), o menu conforme o papel (Usuários só para ADM) e a área da página                             |
+| `components/RouteGuards.tsx`    | `RequireAuth` (sem sessão → login, levando o aviso), `RequireGuest` (com sessão → perfil) e `RequireAdmin` (não é ADM → perfil)                       |
+| `session/roles.ts`              | `isAdmin(session)`: só `admin === true` conta como ADM                                                                                                |
 | `pages/LoginPage.tsx`           | Tela Entrar                                                                                                                                           |
 | `pages/RegisterPage.tsx`        | Tela Criar conta, com confirmação de senha                                                                                                            |
-| `pages/ProfilePage.tsx`         | Tela Perfil: carrega os dados, edita via PATCH, sai e exclui a conta                                                                                  |
+| `pages/UserPage.tsx`            | Perfil (`/perfil`) e perfil de outro usuário para o ADM (`/usuarios/:id`): carrega, edita via PATCH, sai (só o próprio) e exclui                     |
+| `pages/UsersPage.tsx`           | Lista de usuários do ADM (`GET /users`)                                                                                                               |
 
 ---
 

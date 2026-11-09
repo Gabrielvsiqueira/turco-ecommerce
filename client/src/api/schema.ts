@@ -200,13 +200,60 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Listar todos os usuários (ADM)
+         * @description Retorna todos os usuários cadastrados, incluindo o próprio ADM,
+         *     ordenados por id crescente. Sem paginação. Exclusivo de ADM:
+         *     usuário comum recebe 403.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista recuperada com sucesso (pode ser vazia). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"][];
+                    };
+                };
+                /** @description Token ausente ou inválido. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description O dono do token não é ADM. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                500: components["responses"]["ErroInterno"];
+            };
+        };
         put?: never;
         /**
          * Criar um novo usuário
          * @description Cadastra um novo usuário no sistema. Se o e-mail já existir no banco,
          *     o servidor deve responder 409 e o cliente deve orientar o usuário a
          *     fazer login em vez de se cadastrar novamente.
+         *     Sempre cria um usuário comum ("admin": false). Um campo "admin"
+         *     enviado no corpo é ignorado (regra 7): como cada servidor cria seus
+         *     ADMs fica fora do protocolo.
          */
         post: {
             parameters: {
@@ -254,7 +301,7 @@ export interface paths {
         delete?: never;
         /**
          * Preflight CORS
-         * @description Checagem automática do navegador antes de POST /users. Sem token, sem corpo.
+         * @description Checagem automática do navegador antes de GET ou POST /users. Sem token, sem corpo.
          */
         options: {
             parameters: {
@@ -294,8 +341,8 @@ export interface paths {
         /**
          * Buscar usuário por ID
          * @description Retorna os dados do usuário identificado pelo id informado. O id da
-         *     URL deve pertencer ao dono do token enviado no header Authorization;
-         *     caso contrário, a consulta é negada.
+         *     URL deve pertencer ao dono do token enviado no header Authorization,
+         *     ou o dono do token deve ser ADM; caso contrário, a consulta é negada.
          */
         get: {
             parameters: {
@@ -336,7 +383,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErroResponse"];
                     };
                 };
-                /** @description O id do usuário não pertence ao dono do token enviado. */
+                /** @description O id do usuário não pertence ao dono do token enviado, e o dono do token não é ADM. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -361,9 +408,11 @@ export interface paths {
          * Atualizar usuário
          * @description Atualiza todos os dados do usuário identificado pelo id informado. O
          *     id da URL deve pertencer ao dono do token enviado no header
-         *     Authorization; caso contrário, a atualização é negada.
+         *     Authorization, ou o dono do token deve ser ADM; caso contrário, a
+         *     atualização é negada.
          *     Exige nome, email e senha juntos — falta de qualquer um dá 400. Pra
          *     mudar só um campo, usar PATCH.
+         *     Não muda o papel do usuário: um campo "admin" no corpo é ignorado (regra 7).
          */
         put: {
             parameters: {
@@ -408,7 +457,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErroResponse"];
                     };
                 };
-                /** @description O id do usuário não pertence ao dono do token enviado. */
+                /** @description O id do usuário não pertence ao dono do token enviado, e o dono do token não é ADM. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -442,8 +491,8 @@ export interface paths {
         /**
          * Remover usuário
          * @description Exclui o usuário identificado pelo id informado. O id da URL deve
-         *     pertencer ao dono do token enviado no header Authorization; caso
-         *     contrário, a exclusão é negada.
+         *     pertencer ao dono do token enviado no header Authorization, ou o dono
+         *     do token deve ser ADM; caso contrário, a exclusão é negada.
          *     A exclusão derruba da whitelist todas as sessões desse usuário —
          *     depois disso, qualquer requisição com esses tokens dá 401. Confirmar
          *     com o usuário antes de chamar essa rota é responsabilidade do cliente.
@@ -485,7 +534,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErroResponse"];
                     };
                 };
-                /** @description O id do usuário não pertence ao dono do token enviado. */
+                /** @description O id do usuário não pertence ao dono do token enviado, e o dono do token não é ADM. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -539,7 +588,10 @@ export interface paths {
          * Atualizar parcialmente usuário
          * @description Atualiza um ou mais campos do usuário identificado pelo id informado.
          *     O id da URL deve pertencer ao dono do token enviado no header
-         *     Authorization; caso contrário, a atualização é negada.
+         *     Authorization, ou o dono do token deve ser ADM; caso contrário, a
+         *     atualização é negada.
+         *     Não muda o papel do usuário: um campo "admin" no corpo é ignorado
+         *     (regra 7) e não conta para o mínimo de um campo.
          */
         patch: {
             parameters: {
@@ -584,7 +636,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErroResponse"];
                     };
                 };
-                /** @description O id do usuário não pertence ao dono do token enviado. */
+                /** @description O id do usuário não pertence ao dono do token enviado, e o dono do token não é ADM. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -604,6 +656,437 @@ export interface paths {
                 };
                 /** @description O e-mail informado já está cadastrado por outro usuário. */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                500: components["responses"]["ErroInterno"];
+            };
+        };
+        trace?: never;
+    };
+    "/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar todos os produtos
+         * @description Retorna todos os produtos cadastrados, com a quantidade em estoque,
+         *     ordenados por id crescente. Sem paginação. Liberado para qualquer
+         *     usuário autenticado (comum ou ADM).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista recuperada com sucesso (pode ser vazia). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"][];
+                    };
+                };
+                /** @description Token ausente ou inválido. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                500: components["responses"]["ErroInterno"];
+            };
+        };
+        put?: never;
+        /**
+         * Cadastrar produto (ADM)
+         * @description Cadastra um novo produto com nome, descrição e quantidade em estoque.
+         *     Exclusivo de ADM. Nomes repetidos são permitidos: cada produto é
+         *     identificado pelo id.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProductRequest"];
+                };
+            };
+            responses: {
+                /** @description Produto criado com sucesso. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"];
+                    };
+                };
+                /** @description Corpo mal formatado, campo obrigatório ausente ou fora das restrições. Inclui campo com tipo errado ou valor null. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Token ausente ou inválido. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description O dono do token não é ADM. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                500: components["responses"]["ErroInterno"];
+            };
+        };
+        delete?: never;
+        /**
+         * Preflight CORS
+         * @description Checagem automática do navegador antes de GET ou POST /products. Sem token, sem corpo.
+         */
+        options: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Preflight aceito. */
+                204: {
+                    headers: {
+                        "Access-Control-Allow-Origin": components["headers"]["AccessControlAllowOrigin"];
+                        "Access-Control-Allow-Methods": components["headers"]["AccessControlAllowMethods"];
+                        "Access-Control-Allow-Headers": components["headers"]["AccessControlAllowHeaders"];
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador único do produto */
+                id: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * Buscar produto por ID (consulta de estoque)
+         * @description Retorna os detalhes do produto e a quantidade em estoque. Liberado
+         *     para qualquer usuário autenticado (comum ou ADM).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Identificador único do produto */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Produto encontrado com sucesso. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"];
+                    };
+                };
+                /** @description O id informado na URL não é um número inteiro válido. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Token ausente ou inválido. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Produto não encontrado. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                500: components["responses"]["ErroInterno"];
+            };
+        };
+        /**
+         * Atualizar produto (ADM)
+         * @description Atualiza todos os dados do produto. Exclusivo de ADM.
+         *     Exige nome, descricao e quantidade juntos — falta de qualquer um dá
+         *     400. Pra mudar só um campo (ex.: só o estoque), usar PATCH.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Identificador único do produto */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProductRequest"];
+                };
+            };
+            responses: {
+                /** @description Produto atualizado com sucesso. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"];
+                    };
+                };
+                /** @description Corpo mal formatado, campo obrigatório ausente, ou id da URL inválido. Inclui campo com tipo errado ou valor null. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Token ausente ou inválido. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description O dono do token não é ADM. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Produto não encontrado. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                500: components["responses"]["ErroInterno"];
+            };
+        };
+        post?: never;
+        /**
+         * Remover produto (ADM)
+         * @description Remove o produto dos registros. Exclusivo de ADM. Confirmar com o
+         *     usuário antes de chamar essa rota é responsabilidade do cliente.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Identificador único do produto */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Produto removido com sucesso, sem conteúdo de retorno. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description O id informado na URL não é um número inteiro válido. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Token ausente ou inválido. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description O dono do token não é ADM. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Produto não encontrado. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                500: components["responses"]["ErroInterno"];
+            };
+        };
+        /**
+         * Preflight CORS
+         * @description Checagem automática do navegador antes de GET, PUT, PATCH ou DELETE /products/{id}. Sem token, sem corpo.
+         */
+        options: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Identificador único do produto */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Preflight aceito. */
+                204: {
+                    headers: {
+                        "Access-Control-Allow-Origin": components["headers"]["AccessControlAllowOrigin"];
+                        "Access-Control-Allow-Methods": components["headers"]["AccessControlAllowMethods"];
+                        "Access-Control-Allow-Headers": components["headers"]["AccessControlAllowHeaders"];
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        head?: never;
+        /**
+         * Atualizar parcialmente produto (ADM)
+         * @description Atualiza um ou mais campos do produto. Exclusivo de ADM.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Identificador único do produto */
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProductPatchRequest"];
+                };
+            };
+            responses: {
+                /** @description Produto atualizado com sucesso. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"];
+                    };
+                };
+                /** @description Corpo mal formatado, corpo vazio (sem nenhum campo), ou id da URL inválido. Inclui campo com tipo errado ou valor null. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Token ausente ou inválido. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description O dono do token não é ADM. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErroResponse"];
+                    };
+                };
+                /** @description Produto não encontrado. */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -655,6 +1138,35 @@ export interface components {
              * @example aluno_joao@exemplo.com
              */
             email: string;
+            /**
+             * @description true se o usuário é ADM. Só leitura — não é alterado por nenhuma rota.
+             * @example false
+             */
+            admin: boolean;
+        };
+        ProductRequest: {
+            nome: components["schemas"]["NomeProduto"];
+            descricao: components["schemas"]["Descricao"];
+            quantidade: components["schemas"]["Quantidade"];
+        };
+        /** @description Pelo menos um campo (nome, descricao ou quantidade). Só o que for enviado muda. */
+        ProductPatchRequest: {
+            nome?: components["schemas"]["NomeProduto"];
+            descricao?: components["schemas"]["Descricao"];
+            quantidade?: components["schemas"]["Quantidade"];
+        };
+        ProductResponse: {
+            /** @example 1 */
+            id: number;
+            /** @example Teclado mecânico */
+            nome: string;
+            /** @example Teclado ABNT2 com switch azul */
+            descricao: string;
+            /**
+             * @description Quantidade em estoque.
+             * @example 15
+             */
+            quantidade: number;
         };
         /**
          * Format: email
@@ -675,6 +1187,23 @@ export interface components {
          * @example João da Silva
          */
         Nome: string;
+        /**
+         * @description Entre 2 e 100 caracteres, já com trim (sem espaços nas pontas).
+         * @example Teclado mecânico
+         */
+        NomeProduto: string;
+        /**
+         * @description Detalhes do produto. Até 500 caracteres, já com trim. Pode ser
+         *     vazia ("") quando não houver detalhes, mas o campo precisa vir.
+         * @example Teclado ABNT2 com switch azul
+         */
+        Descricao: string;
+        /**
+         * @description Quantidade em estoque. Número inteiro JSON entre 0 e 1.000.000.
+         *     Decimal (ex.: 1.5), negativo ou texto (ex.: "10") dá 400.
+         * @example 15
+         */
+        Quantidade: number;
         ErroResponse: {
             /**
              * @description Mensagem legível do erro, pra mostrar ao usuário.
